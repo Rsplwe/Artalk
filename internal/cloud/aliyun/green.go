@@ -20,13 +20,12 @@ func GreenText(conf GreenTextConf) (bool, error) {
 	body, err := RequestApi(AliyunApiRequestConf{
 		AccessKeyId:     conf.AccessKeyId,
 		AccessKeySecret: conf.AccessKeySecret,
-		BaseURL:         "https://green." + conf.Region + ".aliyuncs.com",
-		Path:            "/green/text/scan",
-		Version:         "2018-05-09",
+		BaseURL:         "https://green-cip." + conf.Region + ".aliyuncs.com",
+		Path:            "/",
+		Version:         "2022-03-02",
 		Data: map[string]interface{}{
-			"scenes": []string{"antispam"},
-			"tasks": map[string]interface{}{
-				"dataId":  conf.DataID,
+			"Service": []string{"comment_detection"},
+			"ServiceParameters": map[string]interface{}{
 				"content": conf.Content,
 			},
 		},
@@ -42,36 +41,26 @@ func GreenText(conf GreenTextConf) (bool, error) {
 	}
 
 	if data.Code != 200 {
-		return false, fmt.Errorf(data.Msg)
+		return false, fmt.Errorf(data.Message)
 	}
-	if len(data.Data) < 1 || len(data.Data[0].Results) < 1 {
+
+	if len(data.Data) < 1 {
 		return false, fmt.Errorf("not expected response: %s", string(body))
 	}
 
-	return (data.Data[0].Results[0].Suggestion == "pass"), nil
+	if data.Data[0].Reason == "" && data.Data[0].Labels == "" {
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
 
 type GreenTextResponse struct {
-	Code int `json:"code"`
+	Code int `json:"Code"`
 	Data []struct {
-		Code    int    `json:"code"`
-		Content string `json:"content"`
-		DataID  string `json:"dataId"`
-		Msg     string `json:"msg"`
-		Results []struct {
-			Details []struct {
-				Contexts []struct {
-					Context string `json:"context"`
-				} `json:"contexts"`
-				Label string `json:"label"`
-			} `json:"details"`
-			Label      string  `json:"label"`
-			Rate       float64 `json:"rate"`
-			Scene      string  `json:"scene"`
-			Suggestion string  `json:"suggestion"`
-		} `json:"results"`
-		TaskID string `json:"taskId"`
-	} `json:"data"`
-	Msg       string `json:"msg"`
-	RequestID string `json:"requestId"`
+		Reason string `json:"reason"`
+		Labels string `json:"labels"`
+	} `json:"Data"`
+	Message   string `json:"Message"`
+	RequestID string `json:"RequestId"`
 }
